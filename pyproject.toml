@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mast-freegsnke-pipeline"
-version = "1.1.0"
-description = "MAST (MastApp) experimental data -> cache -> generated FreeGSNKE equilibrium scripts"
+version = "1.2.0"
+description = "Deterministic pipeline: FAIR-MAST shot data → cached inputs → generated FreeGSNKE reconstruction run folder (scripts, windows, geometry, contracts, metrics)"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
