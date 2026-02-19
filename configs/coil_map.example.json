@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "mapping": {
+    "P2_INNER_A": {
+      "coil": "P2_inner",
+      "scale": 1.0,
+      "sign": 1
+    },
+    "P2_OUTER_A": {
+      "coil": "P2_outer",
+      "scale": 1.0,
+      "sign": 1
+    }
+  }
+}

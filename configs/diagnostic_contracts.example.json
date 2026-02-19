@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "diagnostics": [
+    {
+      "name": "example_flux_loop_1",
+      "dtype": "flux_loop",
+      "units": "Wb",
+      "exp": {
+        "csv": "runs/shot_00000/inputs/magnetics.csv",
+        "time_col": "time",
+        "value_col": "FL1",
+        "scale": 1.0,
+        "sign": 1.0
+      },
+      "syn": {
+        "csv": "runs/shot_00000/synthetic/synthetic_flux_loops.csv",
+        "time_col": "time",
+        "value_col": "FL1",
+        "scale": 1.0,
+        "sign": 1.0
+      },
+      "notes": "Edit paths/columns for your shot; keep deterministic sign/scale conventions."
+    }
+  ]
+}
