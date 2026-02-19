@@ -18,6 +18,8 @@ from .diagnostic_contracts import load_contracts, validate_contracts
 from .coil_map import load_coil_map, validate_coil_map
 from .machine_authority import machine_authority_from_dir, snapshot_machine_authority
 from .reviewer_pack import build_reviewer_pack
+from .robustness.orchestrator import robustness_run
+from .robustness.reviewer_pack import build_robustness_reviewer_pack
 
 
 def _has(pkg: str) -> bool:
@@ -78,6 +80,17 @@ def main(argv=None) -> int:
     mav.add_argument("--snapshot-to", type=str, default=None, help="If set, copy authority into this run directory's machine_authority_snapshot/")
 
     rp = sub.add_parser("reviewer-pack", help="Build a self-contained reviewer pack for a completed run")
+
+    rr = sub.add_parser("robustness-run", help="Run v4 multi-window robustness (DOE + stability) inside an existing run directory")
+    rr.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
+    rr.add_argument("--policy", type=str, default="maximin", help="Robust selection policy: maximin|quantile75")
+    rr.add_argument("--green", type=float, default=0.05, help="GREEN relative degradation threshold")
+    rr.add_argument("--yellow", type=float, default=0.15, help="YELLOW relative degradation threshold")
+    rr.add_argument("--allow-sign-toggle", action="store_true", help="Enable explicit sign-toggle perturbation scenarios (default off)")
+
+    rp2 = sub.add_parser("robustness-pack", help="Build robustness reviewer pack (requires prior robustness-run)")
+    rp2.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
+    rp2.add_argument("--out", type=str, default=None, help="Optional output directory (defaults to <run>/robustness_v4/ROBUSTNESS_REVIEWER_PACK)")
     rp.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
     rp.add_argument("--out", type=str, default=None, help="Optional output directory (defaults to <run>/REVIEWER_PACK)")
 
@@ -286,10 +299,31 @@ def main(argv=None) -> int:
                 for m in rep["missing"]:
                     print(f"  - {m}")
             return 0
+
         except Exception as e:
             print(f"[FAIL] reviewer-pack error: {e}")
             return 46
-    
+
+
+    if args.cmd == "robustness-run":
+        out_root = robustness_run(
+            run_dir=Path(args.run),
+            policy=str(args.policy),
+            green=float(args.green),
+            yellow=float(args.yellow),
+            allow_sign_toggle=bool(args.allow_sign_toggle),
+        )
+        print(json.dumps({"ok": True, "robustness_dir": str(out_root)}, indent=2))
+        return 0
+
+    if args.cmd == "robustness-pack":
+        out = build_robustness_reviewer_pack(
+            run_dir=Path(args.run),
+            out_dir=Path(args.out) if args.out else None,
+        )
+        print(json.dumps({"ok": True, "robustness_pack": str(out)}, indent=2))
+        return 0
+
     if args.cmd == "consensus":
         from .util import write_json
         from .window_consensus import infer_consensus_window

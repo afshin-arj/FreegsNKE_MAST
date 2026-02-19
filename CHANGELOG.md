@@ -27,3 +27,12 @@ All notable changes to this project are documented in this file.
 ## 0.9.0 — FreeGSNKE-native magnetic probe dict export
 - Emitted `magnetic_probes.pickle` in FreeGSNKE-native dict format.
 
+
+
+## v4.0.0 — Regime-Segmented Robustness & Continuity Authority
+- Added v4 robustness package under src/mast_freegsnke/robustness
+- Added CLI commands: robustness-run, robustness-pack
+- Multi-window library generation around baseline window
+- Deterministic DOE scenarios per window (window clipping, leave-one-out, contract scale perturbations)
+- Stability tiering (GREEN/YELLOW/RED) and continuity metrics
+- Robustness reviewer pack export

@@ -287,3 +287,34 @@ mast-freegsnke reviewer-pack --run runs/shot_30201
 
 This creates `runs/shot_30201/REVIEWER_PACK/` with:
 manifest(s), provenance, machine authority snapshot, contracts, metrics, plots (if available), and logs.
+
+
+# v3.0.0 — Robustness & Sensitivity Authority
+
+New CLI Commands:
+
+    mast-freegsnke robustness-run
+    mast-freegsnke robustness-pack
+
+Capabilities:
+- Deterministic DOE scenario generation
+- Explicit robust selection policies (maximin, quantile)
+- Stability tier classification (GREEN/YELLOW/RED)
+- Hash-lockable scenario descriptors
+- Reviewer-grade robustness export
+
+
+# v4.0.0 — Regime-Segmented Robustness & Continuity Authority
+
+New CLI Commands:
+
+    mast-freegsnke robustness-run --run runs/shot_<N>
+    mast-freegsnke robustness-pack --run runs/shot_<N>
+
+What it does:
+- Deterministically generates a multi-window library around the baseline window
+- Executes deterministic DOE scenarios per window (window clipping, leave-one-out, contract scale perturbations)
+- Aggregates metrics per window and selects a robust choice with deterministic tie-breaking
+- Computes stability tiers (GREEN/YELLOW/RED) from relative degradation across scenarios
+- Computes cross-window continuity metrics and a global robust choice
+- Exports a robustness reviewer pack as a self-contained evidence bundle
