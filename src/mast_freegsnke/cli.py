@@ -16,6 +16,8 @@ from .pipeline import ShotPipeline
 from .probe_geometry import build_geometry_from_machine_dir, write_geometry_templates, smoke_test_geometry
 from .diagnostic_contracts import load_contracts, validate_contracts
 from .coil_map import load_coil_map, validate_coil_map
+from .machine_authority import machine_authority_from_dir, snapshot_machine_authority
+from .reviewer_pack import build_reviewer_pack
 
 
 def _has(pkg: str) -> bool:
@@ -70,6 +72,15 @@ def main(argv=None) -> int:
     mv = sub.add_parser("coilmap-validate", help="Validate PF/coil mapping JSON")
     mv.add_argument("--coil-map", type=str, required=True)
 
+
+    mav = sub.add_parser("machine-validate", help="Validate and (optionally) snapshot machine authority directory")
+    mav.add_argument("--machine-authority", type=str, required=True)
+    mav.add_argument("--snapshot-to", type=str, default=None, help="If set, copy authority into this run directory's machine_authority_snapshot/")
+
+    rp = sub.add_parser("reviewer-pack", help="Build a self-contained reviewer pack for a completed run")
+    rp.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
+    rp.add_argument("--out", type=str, default=None, help="Optional output directory (defaults to <run>/REVIEWER_PACK)")
+
     r = sub.add_parser("run", help="Run pipeline for a shot")
     r.add_argument("--shot", type=int, required=True)
     r.add_argument("--config", type=str, required=True)
@@ -79,6 +90,10 @@ def main(argv=None) -> int:
     r.add_argument("--execute-freegsnke", action="store_true", help="Execute generated FreeGSNKE scripts (requires freegsnke in selected python)")
     r.add_argument("--freegsnke-mode", type=str, default=None, help="Override config freegsnke_run_mode: none|inverse|forward|both")
     r.add_argument("--freegsnke-python", type=str, default=None, help="Override config freegsnke_python (path to python exe in FreeGSNKE env)")
+    r.add_argument("--contracts", type=str, default=None, help="Override config diagnostic_contracts_path")
+    r.add_argument("--coil-map", type=str, default=None, help="Override config coil_map_path")
+    r.add_argument("--enable-contract-metrics", action="store_true", help="Enable contract-driven synthetic extraction and residual scoring")
+
 
     args = ap.parse_args(argv)
     cfg = AppConfig.load(Path(args.config))
@@ -213,6 +228,68 @@ def main(argv=None) -> int:
             print(f"[FAIL] geom-smoke error: {e}")
             return 35
 
+    if args.cmd == "contracts-validate":
+        try:
+            contracts = load_contracts(Path(args.contracts), base_dir=Path(args.contracts).parent)
+            rep = validate_contracts(contracts, require_files=bool(args.require_files))
+            print(f"[INFO] contracts ok={rep.get('ok')} n={rep.get('n_contracts')}")
+            if not rep.get("ok", False):
+                for er in rep.get("errors", []):
+                    print(f"  - {er}")
+                return 40
+            return 0
+        except Exception as e:
+            print(f"[FAIL] contracts-validate error: {e}")
+            return 41
+    
+    if args.cmd == "coilmap-validate":
+        try:
+            cm = load_coil_map(Path(args.coil_map))
+            rep = validate_coil_map(cm)
+            print(f"[INFO] coil_map ok={rep.get('ok')} n={rep.get('n')}")
+            if not rep.get("ok", False):
+                for er in rep.get("errors", []):
+                    print(f"  - {er}")
+                return 42
+            return 0
+        except Exception as e:
+            print(f"[FAIL] coilmap-validate error: {e}")
+            return 43
+    
+    if args.cmd == "machine-validate":
+        try:
+            ma_root = Path(args.machine_authority)
+            ma, rep = machine_authority_from_dir(ma_root)
+            print(f"[INFO] machine_authority ok={rep.get('ok')} root={rep.get('root')}")
+            if ma is None:
+                for er in rep.get("errors", []):
+                    print(f"  - {er}")
+                return 44
+            if args.snapshot_to:
+                run_dir = Path(args.snapshot_to)
+                snap = snapshot_machine_authority(ma, run_dir=run_dir)
+                print(f"[OK] snapshot written to: {run_dir / 'machine_authority_snapshot'}")
+                print(f"      authority={snap.get('authority_name')} version={snap.get('authority_version')}")
+            return 0
+        except Exception as e:
+            print(f"[FAIL] machine-validate error: {e}")
+            return 45
+    
+    if args.cmd == "reviewer-pack":
+        try:
+            run_dir = Path(args.run)
+            out_dir = Path(args.out) if args.out else None
+            rep = build_reviewer_pack(run_dir=run_dir, out_dir=out_dir)
+            print(f"[OK] reviewer pack: {rep.get('out_dir')}")
+            if rep.get("missing"):
+                print("[WARN] missing items:")
+                for m in rep["missing"]:
+                    print(f"  - {m}")
+            return 0
+        except Exception as e:
+            print(f"[FAIL] reviewer-pack error: {e}")
+            return 46
+    
     if args.cmd == "consensus":
         from .util import write_json
         from .window_consensus import infer_consensus_window

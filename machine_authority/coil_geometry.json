@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "notes": "TEMPLATE. Define PF coil geometry and naming used by FreeGSNKE machine. Used for governance and future wiring.",
+  "coils": [
+    {
+      "coil": "PF1",
+      "r_m": 1.0,
+      "z_m": 0.5,
+      "n_turns": 10,
+      "polarity": "+",
+      "units": "A"
+    }
+  ]
+}

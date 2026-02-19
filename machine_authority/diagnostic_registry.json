@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "notes": "TEMPLATE registry of canonical diagnostics and expected units.",
+  "diagnostics": [
+    {
+      "name": "psi_floop_FLOOP_001",
+      "kind": "flux_loop",
+      "units": "Wb",
+      "source": "synthetic+experimental"
+    }
+  ]
+}

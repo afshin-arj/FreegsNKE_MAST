@@ -34,6 +34,14 @@ class AppConfig:
     # Enable contract-driven extraction + residual metrics (requires contracts).
     enable_contract_metrics: bool
 
+    # Optional: machine authority directory (versioned geometry/registry).
+    machine_authority_dir: Optional[str]
+    # If True, missing/invalid machine authority is a blocking error.
+    require_machine_authority: bool
+    # If True, also hash downloaded data cache tree (can be expensive).
+    provenance_hash_data: bool
+
+
     @staticmethod
     def load(path: Path) -> "AppConfig":
         obj = json.loads(path.read_text())

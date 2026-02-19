@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "authority_name": "MAST_FreeGSNKE_MachineAuthority",
+  "authority_version": "0.0-template",
+  "provenance": {
+    "source_repo": "CHANGE_ME",
+    "source_commit": "CHANGE_ME",
+    "metrology_reference": "CHANGE_ME"
+  },
+  "files": {
+    "probe_geometry": "probe_geometry.json",
+    "coil_geometry": "coil_geometry.json",
+    "diagnostic_registry": "diagnostic_registry.json"
+  }
+}

@@ -8,6 +8,14 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # headless
+    import matplotlib.pyplot as plt
+    _HAS_MPL = True
+except Exception:
+    _HAS_MPL = False
+
 from .diagnostic_contracts import DiagnosticContract
 
 
@@ -165,6 +173,32 @@ def compare_from_contracts(run_dir: Path, contracts: List[DiagnosticContract]) -
             res_df = pd.DataFrame({"time": t_exp2, "exp": y_exp2, "syn": y_syn_i, "residual": r})
             res_path = out_dir / f"residual_{c.name}.csv"
             res_df.to_csv(res_path, index=False)
+
+            # Deterministic plot artifacts (best-effort; do not block scoring).
+            if _HAS_MPL:
+                try:
+                    rep_dir = run_dir / "report" / "key_plots"
+                    rep_dir.mkdir(parents=True, exist_ok=True)
+
+                    # exp vs syn
+                    fig = plt.figure()
+                    plt.plot(t_exp2, y_exp2, label="exp")
+                    plt.plot(t_exp2, y_syn_i, label="syn")
+                    plt.xlabel("time [s]")
+                    plt.ylabel(f"{c.name} [{c.units}]")
+                    plt.legend()
+                    fig.savefig(rep_dir / f"{c.name}_exp_vs_syn.png", dpi=150, bbox_inches="tight")
+                    plt.close(fig)
+
+                    # residual
+                    fig2 = plt.figure()
+                    plt.plot(t_exp2, r)
+                    plt.xlabel("time [s]")
+                    plt.ylabel(f"residual [{c.units}]")
+                    fig2.savefig(rep_dir / f"{c.name}_residual.png", dpi=150, bbox_inches="tight")
+                    plt.close(fig2)
+                except Exception:
+                    pass
 
             per_contract.append({
                 "name": c.name,

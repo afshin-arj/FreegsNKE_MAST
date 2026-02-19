@@ -1,9 +1,19 @@
 {
   "allow_missing_geometry": false,
   "cache_dir": "data_cache",
+  "coil_map_path": null,
+  "diagnostic_contracts_path": null,
+  "diagnostics_compare": [],
+  "enable_contract_metrics": false,
+  "execute_freegsnke": false,
   "formed_plasma_frac": 0.8,
+  "freegsnke_python": null,
+  "freegsnke_run_mode": "none",
   "level2_s3_prefix": "s3://CHANGE_ME/level2",
+  "machine_authority_dir": "machine_authority",
   "mastapp_base_url": "https://mastapp.site/json",
+  "provenance_hash_data": false,
+  "require_machine_authority": false,
   "required_groups": [
     "pf_active",
     "magnetics"
@@ -16,12 +26,5 @@
     "{prefix}/{group}/shot{shot}.zarr",
     "{prefix}/shot{shot}/{group}.zarr"
   ],
-  "s5cmd_path": "s5cmd",
-  "execute_freegsnke": false,
-  "freegsnke_run_mode": "none",
-  "freegsnke_python": null,
-  "diagnostics_compare": [],
-  "diagnostic_contracts_path": null,
-  "coil_map_path": null,
-  "enable_contract_metrics": false
+  "s5cmd_path": "s5cmd"
 }

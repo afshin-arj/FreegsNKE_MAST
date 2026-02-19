@@ -244,4 +244,46 @@ See the `examples/` directory for progressive, runnable walkthroughs:
 
 - Package version: **1.2.0**
 - Please cite the repository and include `manifest.json` + contracts + geometry reports in any derived publications.
+## Machine Authority (v2.0)
 
+For reviewer-grade runs, this project supports a **versioned machine authority bundle** under `machine_authority/`.
+The authority is **snapshotted** into each run folder (`runs/shot_<N>/machine_authority_snapshot/`) and hashed.
+
+Minimum required files:
+
+- `machine_authority/authority_manifest.json`
+- `machine_authority/probe_geometry.json`
+- `machine_authority/coil_geometry.json`
+- `machine_authority/diagnostic_registry.json`
+
+Validate:
+
+```bash
+mast-freegsnke machine-validate --machine-authority machine_authority/
+```
+
+> Note: the shipped `machine_authority/` is a **template**. Populate it from an authoritative MAST/FreeGSNKE machine
+definition repository. This pipeline will not invent metrology.
+
+## Reproducibility Lock & Manifest v2 (v2.0)
+
+Each successful (or failed) run writes:
+
+- `runs/shot_<N>/provenance/file_hashes.json` (SHA256 of run artifacts)
+- `runs/shot_<N>/provenance/env_fingerprint.json` (Python/OS fingerprint)
+- `runs/shot_<N>/provenance/requirements.freeze.json` (`pip freeze`)
+- `runs/shot_<N>/provenance/repo_state.json` (git commit if available)
+- `runs/shot_<N>/provenance/manifest_v2.json` (hash-based run manifest)
+
+Optional (can be expensive): hash the downloaded cache tree by setting `provenance_hash_data: true` in config.
+
+## Reviewer Pack (v2.0)
+
+To export a self-contained run bundle for collaborators/reviewers:
+
+```bash
+mast-freegsnke reviewer-pack --run runs/shot_30201
+```
+
+This creates `runs/shot_30201/REVIEWER_PACK/` with:
+manifest(s), provenance, machine authority snapshot, contracts, metrics, plots (if available), and logs.

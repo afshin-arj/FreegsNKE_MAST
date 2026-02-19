@@ -4,6 +4,19 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+import hashlib
+
+def sha256_file(path: Path, chunk_bytes: int = 1024 * 1024) -> str:
+    """Compute SHA256 of a file deterministically."""
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while True:
+            b = f.read(chunk_bytes)
+            if not b:
+                break
+            h.update(b)
+    return h.hexdigest()
+
 def write_json(path: Path, obj: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, indent=2, sort_keys=True) + "\n")

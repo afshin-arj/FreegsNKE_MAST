@@ -1,6 +1,7 @@
 
 from __future__ import annotations
 
+import json
 import platform
 import time
 import traceback
@@ -19,6 +20,8 @@ from .windowing import TimeWindow, infer_time_window
 from .window_quality import WindowDiagnostics, evaluate_time_window, format_diagnostics
 from .window_consensus import ConsensusWindow, infer_consensus_window
 from .probe_geometry import build_geometry_from_machine_dir, write_geometry_json, write_geometry_pickle, write_geometry_pickle_internal
+from .machine_authority import machine_authority_from_dir, snapshot_machine_authority
+from .provenance import write_provenance, write_manifest_v2
 from .freegsnke_runner import FreeGSNKERunner, write_execution_report
 from .diagnostic_contracts import load_contracts, validate_contracts, write_resolved_contracts
 from .coil_map import load_coil_map, validate_coil_map, write_resolved_coil_map
@@ -63,8 +66,50 @@ class ShotPipeline:
         run_dir = ensure_dir(runs_root / f"shot_{shot}")
         inputs_dir = ensure_dir(run_dir / "inputs")
 
+
         def _stage(name: str, ok: bool, **kw: Any) -> None:
             stage_log.append({"stage": name, "ok": bool(ok), **kw})
+
+        repo_root = self.templates_dir.parent
+
+        # Machine authority (optional but strongly recommended for reviewer-grade runs).
+        # If present, it is validated and snapshotted into the run directory.
+        machine_snapshot = None
+        ma_root = None
+        if self.cfg.machine_authority_dir:
+            ma_root = Path(self.cfg.machine_authority_dir)
+            if not ma_root.is_absolute():
+                ma_root = (repo_root / ma_root).resolve()
+        else:
+            default_ma = repo_root / "machine_authority"
+            if default_ma.exists():
+                ma_root = default_ma.resolve()
+
+        if ma_root is not None and ma_root.exists():
+            ma, ma_report = machine_authority_from_dir(ma_root)
+            write_json(run_dir / "machine_authority_report.json", ma_report)
+            if ma is not None:
+                machine_snapshot = snapshot_machine_authority(ma, run_dir)
+                _stage(
+                    "machine_authority",
+                    True,
+                    root=str(ma_root),
+                    authority=machine_snapshot.get("authority_name"),
+                    version=machine_snapshot.get("authority_version"),
+                )
+            else:
+                _stage("machine_authority", False, root=str(ma_root), errors=ma_report.get("errors"))
+                if self.cfg.require_machine_authority:
+                    blocking_errors.append("machine_authority_missing_or_invalid (see machine_authority_report.json)")
+        else:
+            note = "not_provided"
+            if self.cfg.machine_authority_dir:
+                note = f"machine_authority_dir_not_found:{self.cfg.machine_authority_dir}"
+            _stage("machine_authority", False, note=note)
+            if self.cfg.require_machine_authority:
+                blocking_errors.append("machine_authority_required_but_missing")
+
+
 
         def _write_manifest(extra: Dict[str, Any]) -> None:
             manifest = {
@@ -281,7 +326,7 @@ class ShotPipeline:
                     else:
                         _stage("contracts", True, note="contract_metrics_disabled_or_no_contracts_path")
 
-# Final status
+            # Final status
             status = "success" if not blocking_errors else "failed"
 
             _write_manifest(
@@ -294,9 +339,26 @@ class ShotPipeline:
                     "time_window_consensus": consensus_obj.__dict__ if consensus_obj is not None else None,
                     "freegsnke_execution": exec_summary,
                     "reconstruction_metrics": metrics_summary,
+                    "machine_authority_snapshot": machine_snapshot,
                 }
             )
 
+            # Reproducibility lock (hash run artifacts + environment capture) and manifest v2.
+            try:
+                base_manifest = json.loads((run_dir / "manifest.json").read_text())
+                hash_data_tree = shot_cache if (self.cfg.provenance_hash_data and shot_cache is not None) else None
+                prov_summary = write_provenance(run_dir=run_dir, repo_root=repo_root, hash_data_tree=hash_data_tree)
+                write_manifest_v2(
+                    run_dir=run_dir,
+                    base_manifest=base_manifest,
+                    provenance_summary=prov_summary,
+                    machine_snapshot=machine_snapshot,
+                )
+                _stage("provenance_lock", True, data_hashed=bool(hash_data_tree is not None))
+            except Exception as e:
+                _stage("provenance_lock", False, error=str(e))
+                if self.cfg.require_machine_authority:
+                    blocking_errors.append(f"provenance_lock_failed: {type(e).__name__}: {e}")
             if blocking_errors:
                 raise RuntimeError("Pipeline completed with blocking errors: " + "; ".join(blocking_errors))
 
