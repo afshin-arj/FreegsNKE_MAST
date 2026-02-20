@@ -335,3 +335,15 @@ CLI is unchanged:
 mast-freegsnke robustness-run --run runs/shot_<N>
 mast-freegsnke robustness-pack --run runs/shot_<N>
 ```
+
+
+## v5.0.0 — Cross-Shot Robustness Atlas + Certified Comparator
+
+New CLI commands:
+
+- `mast-freegsnke corpus-build --runs <run_dirs...> --out <corpus_dir>`
+- `mast-freegsnke atlas-build --corpus <corpus_dir>`
+- `mast-freegsnke compare-run --A <atlasA> --B <atlasB> --out <compare_dir>`
+- `mast-freegsnke regression-guard --delta <compare_dir>/delta_scorecards.json --out <path>`
+
+These commands provide deterministic cross-shot aggregation and A/B certified deltas without hidden optimization.

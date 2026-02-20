@@ -20,6 +20,11 @@ from .machine_authority import machine_authority_from_dir, snapshot_machine_auth
 from .reviewer_pack import build_reviewer_pack
 from .robustness.orchestrator import robustness_run
 from .robustness.reviewer_pack import build_robustness_reviewer_pack
+from .corpus.corpus_build import build_corpus
+from .corpus.atlas import build_atlas
+from .corpus.compare import compare_atlases
+from .corpus.regression_guard import regression_guard
+
 
 
 def _has(pkg: str) -> bool:
@@ -94,6 +99,27 @@ def main(argv=None) -> int:
     rp.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
     rp.add_argument("--out", type=str, default=None, help="Optional output directory (defaults to <run>/REVIEWER_PACK)")
 
+    
+    cb = sub.add_parser("corpus-build", help="Build a deterministic corpus index from completed run directories (v5)")
+    cb.add_argument("--runs", type=str, nargs="+", required=True, help="One or more run directories, e.g. runs/shot_30201")
+    cb.add_argument("--out", type=str, required=True, help="Output directory for corpus artifacts")
+    cb.add_argument("--robustness-subdir", type=str, default="robustness_v4", help="Robustness artifact directory name inside each run (default robustness_v4)")
+
+    ab = sub.add_parser("atlas-build", help="Build a cross-shot robustness atlas from a corpus (v5)")
+    ab.add_argument("--corpus", type=str, required=True, help="Corpus directory produced by corpus-build")
+    ab.add_argument("--out", type=str, default=None, help="Optional atlas output directory (default <corpus>/atlas)")
+
+    cr = sub.add_parser("compare-run", help="Compare two atlas directories (A/B) and produce certified deltas (v5)")
+    cr.add_argument("--A", type=str, required=True, help="Atlas directory A (contains atlas_metrics.csv)")
+    cr.add_argument("--B", type=str, required=True, help="Atlas directory B (contains atlas_metrics.csv)")
+    cr.add_argument("--out", type=str, required=True, help="Output directory for comparator artifacts")
+
+    rg = sub.add_parser("regression-guard", help="Apply deterministic regression guard to a compare-run output (v5)")
+    rg.add_argument("--delta", type=str, required=True, help="Path to delta_scorecards.json from compare-run")
+    rg.add_argument("--out", type=str, required=True, help="Output path for regression_guard.json")
+    rg.add_argument("--max-red-increase", type=int, default=0, help="Maximum allowed increase in RED tier count (default 0)")
+    rg.add_argument("--max-median-degradation-increase", type=float, default=0.0, help="Maximum allowed increase in median relative degradation (default 0.0)")
+
     r = sub.add_parser("run", help="Run pipeline for a shot")
     r.add_argument("--shot", type=int, required=True)
     r.add_argument("--config", type=str, required=True)
@@ -131,6 +157,36 @@ def main(argv=None) -> int:
         else:
             print("[WARN] optional zarr stack missing (extraction will be skipped). Install: pip install -e '.[zarr]'")
         return 0 if ok else 2
+
+
+    if args.cmd == "corpus-build":
+        out = build_corpus(
+            run_dirs=[Path(p) for p in args.runs],
+            out_dir=Path(args.out),
+            robustness_subdir=args.robustness_subdir,
+        )
+        print(str(out))
+        return 0
+
+    if args.cmd == "atlas-build":
+        out = build_atlas(corpus_dir=Path(args.corpus), out_dir=Path(args.out) if args.out else None)
+        print(str(out))
+        return 0
+
+    if args.cmd == "compare-run":
+        out = compare_atlases(atlas_a=Path(args.A), atlas_b=Path(args.B), out_dir=Path(args.out))
+        print(str(out))
+        return 0
+
+    if args.cmd == "regression-guard":
+        out = regression_guard(
+            delta_scorecards_path=Path(args.delta),
+            out_path=Path(args.out),
+            max_red_increase=args.max_red_increase,
+            max_median_degradation_increase=args.max_median_degradation_increase,
+        )
+        print(json.dumps(out, indent=2, sort_keys=True))
+        return 0 if out.get("ok") else 6
 
     if args.cmd == "check":
         client = MastAppClient(base_url=cfg.mastapp_base_url)

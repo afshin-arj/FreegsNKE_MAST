@@ -1,3 +1,6 @@
+## 5.0.0
+- Added cross-shot corpus indexing, atlas builder, certified atlas comparator, and deterministic regression guard.
+
 # Changelog
 
 ## v4.1.0 (2026-02-19)
