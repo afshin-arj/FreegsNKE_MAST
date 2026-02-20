@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mast-freegsnke-pipeline"
-version = "2.0.0"
+version = "4.1.0"
 description = "Deterministic pipeline: FAIR-MAST shot data → cached inputs → generated FreeGSNKE reconstruction run folder (scripts, windows, geometry, contracts, metrics)"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
   "requests>=2.31.0",
+  "numpy>=1.23.0",
+  "pandas>=2.0.0",
+  "matplotlib>=3.6.0",
 ]
 
 [project.optional-dependencies]
@@ -17,8 +20,6 @@ zarr = [
   "xarray>=2023.12.0",
   "fsspec>=2023.12.0",
   "zarr>=2.16.0",
-  "numpy>=1.23.0",
-  "pandas>=2.0.0",
 ]
 dev = ["pytest>=7.4.0"]
 

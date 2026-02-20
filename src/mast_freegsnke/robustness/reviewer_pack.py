@@ -26,6 +26,12 @@ def build_robustness_reviewer_pack(run_dir: Path, out_dir: Path | None = None) -
         "continuity_metrics.csv",
         "global_robust_choice.json",
         "robust_summary.md",
+        # v4.1 additions
+        "phase_consistency_scorecard.json",
+        "phase_consistency_summary.md",
+        "sensitivity_attribution.json",
+        "dominant_failure_modes.md",
+        "plots_manifest.json",
     ]:
         src = rob / name
         if src.exists():
@@ -35,5 +41,10 @@ def build_robustness_reviewer_pack(run_dir: Path, out_dir: Path | None = None) -
     wsrc = rob / "windows"
     if wsrc.exists():
         shutil.copytree(wsrc, out / "windows", dirs_exist_ok=True)
+
+    # copy plots if present
+    psrc = rob / "plots"
+    if psrc.exists():
+        shutil.copytree(psrc, out / "plots", dirs_exist_ok=True)
 
     return out

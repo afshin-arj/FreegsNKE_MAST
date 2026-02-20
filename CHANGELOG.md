@@ -1,12 +1,12 @@
-## 2.0.0
-
-- Added machine authority bundle (`machine_authority/`) with validation and per-run snapshots.
-- Added reproducibility lock: SHA256 hashing of run artifacts + environment fingerprint + manifest v2.
-- Added reviewer pack builder (`mast-freegsnke reviewer-pack`).
-- Added deterministic plot artifacts for contract residuals (best-effort).
-- Extended README and examples.
-
 # Changelog
+
+## v4.1.0 (2026-02-19)
+- Added phase-consistency authority and scorecard outputs
+- Added sensitivity attribution ledger and dominant failure modes report
+- Added deterministic plot authority with plots manifest (SHA256)
+- Robustness reviewer pack now includes new evidence artifacts and plots
+
+
 
 All notable changes to this project are documented in this file.
 

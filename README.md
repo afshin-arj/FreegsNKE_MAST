@@ -318,3 +318,20 @@ What it does:
 - Computes stability tiers (GREEN/YELLOW/RED) from relative degradation across scenarios
 - Computes cross-window continuity metrics and a global robust choice
 - Exports a robustness reviewer pack as a self-contained evidence bundle
+
+
+## v4.1.0 — Phase Consistency + Attribution + Plot Authority
+
+Adds licensing-style robustness evidence on top of v4.0.0:
+
+- Phase-consistency classification (PHASE-CONSISTENT / PHASE-DRIFTING / PHASE-BREAKING)
+- Sensitivity attribution ledger (dominant scenario families, top damage scenarios)
+- Deterministic plot generation with hash manifest (`plots_manifest.json`)
+- Robustness reviewer pack upgraded to include new evidence outputs
+
+CLI is unchanged:
+
+```bash
+mast-freegsnke robustness-run --run runs/shot_<N>
+mast-freegsnke robustness-pack --run runs/shot_<N>
+```

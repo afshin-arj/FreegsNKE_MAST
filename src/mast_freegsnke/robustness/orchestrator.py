@@ -11,6 +11,9 @@ from .phase_segmentation import segment_phases_from_window
 from .scenario_generation import generate_scenarios_for_window
 from .scenario_execution import run_scenario
 from .analysis import load_scenario_metrics, select_robust_choice, stability_tiering, continuity_metrics
+from .phase_consistency import compute_phase_consistency
+from .attribution import sensitivity_attribution, dominant_failure_modes_markdown
+from .plotting import generate_plots
 from ..diagnostic_contracts import load_contracts
 
 def robustness_run(
@@ -110,6 +113,29 @@ def robustness_run(
 
     cont = continuity_metrics(per_window_summary)
     cont.to_csv(out_root / "continuity_metrics.csv", index=False)
+
+    # v4.1: phase-consistency classification (regime-aware, deterministic)
+    per_window_df = pd.DataFrame(per_window_summary).sort_values(["window_id"], kind="mergesort")
+    phase_consistency = compute_phase_consistency(per_window_df, phases)
+    (out_root / "phase_consistency_scorecard.json").write_text(json.dumps(phase_consistency, indent=2, sort_keys=True))
+    pcs_md = ["# Phase Consistency Summary", ""]
+    if phase_consistency.get("ok"):
+        pcs_md += [f"- global_label: **{phase_consistency.get('global_label')}**", ""]
+        for ph in phase_consistency.get("phases", []):
+            if not ph.get("ok"):
+                pcs_md.append(f"- {ph.get('phase')}: (no windows)")
+                continue
+            pcs_md.append(f"- {ph['phase']}: **{ph['label']}** (dominant_fraction={ph['dominant_fraction']:.2f}, rel_drift={ph['relative_score_drift']:.2f}, flip_rate={ph['flip_rate']:.2f})")
+    (out_root / "phase_consistency_summary.md").write_text("\n".join(pcs_md) + "\n")
+
+    # v4.1: sensitivity attribution ledger (family dominance + top damage scenarios)
+    attrib = sensitivity_attribution(out_root)
+    (out_root / "sensitivity_attribution.json").write_text(json.dumps(attrib, indent=2, sort_keys=True))
+    (out_root / "dominant_failure_modes.md").write_text(dominant_failure_modes_markdown(attrib) + "\n")
+
+    # v4.1: deterministic plots + plot manifest (hash-locked)
+    generate_plots(out_root)
+
 
     # global robust choice: choose window whose chosen score_total is minimal (deterministic tie-break by window_id)
     if not dfw.empty:
