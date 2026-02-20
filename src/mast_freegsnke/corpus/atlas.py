@@ -36,6 +36,13 @@ def build_atlas(corpus_dir: Path, out_dir: Optional[Path] = None) -> Path:
         attrib = _load_json(rob / "sensitivity_attribution.json")
         choice = _load_json(rob / "global_robust_choice.json")
 
+        # v6: physics audit (optional)
+        phys_path = rob / "physics_audit" / "physics_consistency_scorecard.json"
+        phys = _load_json(phys_path) if phys_path.exists() else None
+
+        mfe_path = rob / "model_form" / "model_form_scorecard.json"
+        mfe = _load_json(mfe_path) if mfe_path.exists() else None
+
         rows.append({
             "shot": shot,
             "run_dir": e["run_dir"],
@@ -45,6 +52,10 @@ def build_atlas(corpus_dir: Path, out_dir: Optional[Path] = None) -> Path:
             "dominant_family": attrib.get("dominant_family"),
             "robust_scenario_id": choice.get("scenario_id"),
             "robust_score_total": float(choice.get("score_total", float("nan"))) if choice.get("score_total") is not None else float("nan"),
+            "physics_tier": (phys.get("tier") if phys else None),
+            "physics_max_violation": (float(phys.get("max_violation")) if (phys and phys.get("max_violation") is not None) else float("nan")),
+            "mfe_tier": (mfe.get("tier") if mfe else None),
+            "mfe_worst_relative_degradation": (float(mfe.get("worst_relative_degradation")) if (mfe and mfe.get("worst_relative_degradation") is not None) else float("nan")),
         })
 
     df = pd.DataFrame(rows).sort_values(["shot", "run_dir"], kind="mergesort")
@@ -56,7 +67,7 @@ def build_atlas(corpus_dir: Path, out_dir: Optional[Path] = None) -> Path:
     fam_counts = df["dominant_family"].value_counts(dropna=False).to_dict()
 
     summary = {
-        "schema_version": "v5.0.0",
+        "schema_version": "v7.0.0",
         "n": int(len(df)),
         "tier_counts": tier_counts,
         "phase_label_counts": phase_counts,

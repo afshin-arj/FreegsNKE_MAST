@@ -39,3 +39,17 @@ All notable changes to this project are documented in this file.
 - Deterministic DOE scenarios per window (window clipping, leave-one-out, contract scale perturbations)
 - Stability tiering (GREEN/YELLOW/RED) and continuity metrics
 - Robustness reviewer pack export
+
+
+## v6.0.0 — Certified Physics-Consistency Authority
+- Physics audit runner (closure tests + residual budget ledger)
+- Physics-consistency tiering (PHYSICS-GREEN/YELLOW/RED)
+- Physics audit reviewer pack + deterministic plots (hashed)
+- Corpus closure atlas + comparator/regression-guard extensions
+
+
+## v7.0.0 — Traceable Model-Form Error Authority
+- Deterministic CV splits + forward checks from scenario outputs
+- Model-form tiering (MFE-GREEN/YELLOW/RED)
+- Consistency Triangle reviewer pack (robustness + physics + model-form)
+- Atlas/comparator/regression-guard extensions for MFE

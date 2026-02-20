@@ -24,6 +24,16 @@ from .corpus.corpus_build import build_corpus
 from .corpus.atlas import build_atlas
 from .corpus.compare import compare_atlases
 from .corpus.regression_guard import regression_guard
+from .physics_audit.schema import PhysicsAuditConfig
+from .physics_audit.audit import run_physics_audit
+from .physics_audit.pack import build_physics_audit_pack
+from .physics_audit.plots import make_plots as make_physics_plots
+from .corpus.closure_atlas import build_closure_atlas
+from .model_form.schema import ModelFormConfig
+from .model_form.mfe import run_model_form_audit
+from .model_form.splits import generate_cv_splits
+from .model_form.forward import run_forward_checks
+from .model_form.pack import build_consistency_triangle_pack
 
 
 
@@ -96,6 +106,36 @@ def main(argv=None) -> int:
     rp2 = sub.add_parser("robustness-pack", help="Build robustness reviewer pack (requires prior robustness-run)")
     rp2.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
     rp2.add_argument("--out", type=str, default=None, help="Optional output directory (defaults to <run>/robustness_v4/ROBUSTNESS_REVIEWER_PACK)")
+
+
+    pa = sub.add_parser("physics-audit-run", help="Run v6 physics-consistency audit inside an existing run directory (requires robustness_v4)")
+    pa.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
+    pa.add_argument("--primary-metric", type=str, default="score_total", help="Primary metric key from robust choice (default score_total)")
+    pa.add_argument("--green", type=float, default=0.05, help="PHYSICS-GREEN threshold for normalized violation")
+    pa.add_argument("--yellow", type=float, default=0.15, help="PHYSICS-YELLOW threshold for normalized violation")
+    pa.add_argument("--plots", action="store_true", help="Generate deterministic physics-audit plots + hashed manifest")
+
+    pp = sub.add_parser("physics-audit-pack", help="Build physics-audit reviewer pack (requires prior physics-audit-run)")
+    pp.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
+
+    ca = sub.add_parser("closure-atlas-build", help="Build a corpus-level closure atlas from physics-audit outputs (v6)")
+    ca.add_argument("--corpus", type=str, required=True, help="Corpus directory produced by corpus-build")
+    ca.add_argument("--out", type=str, default=None, help="Optional output directory (default <corpus>/atlas/closure_atlas)")
+
+
+    fc = sub.add_parser("forward-check-run", help="Run deterministic forward checks (v7) using existing scenario outputs")
+    fc.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
+    fc.add_argument("--primary-metric", type=str, default="score_total", help="Metric key to evaluate (default score_total)")
+
+    mf = sub.add_parser("model-form-run", help="Run model-form audit: deterministic CV splits + forward checks + MFE tier (v7)")
+    mf.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
+    mf.add_argument("--primary-metric", type=str, default="score_total", help="Metric key to evaluate (default score_total)")
+    mf.add_argument("--green", type=float, default=0.05, help="MFE-GREEN threshold for worst relative degradation")
+    mf.add_argument("--yellow", type=float, default=0.15, help="MFE-YELLOW threshold for worst relative degradation")
+    mf.add_argument("--max-splits", type=int, default=64, help="Maximum number of deterministic CV splits")
+
+    cp = sub.add_parser("consistency-pack", help="Build Consistency Triangle reviewer pack (robustness + physics + model-form)")
+    cp.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
     rp.add_argument("--run", type=str, required=True, help="Run directory, e.g. runs/shot_30201")
     rp.add_argument("--out", type=str, default=None, help="Optional output directory (defaults to <run>/REVIEWER_PACK)")
 
@@ -119,6 +159,10 @@ def main(argv=None) -> int:
     rg.add_argument("--out", type=str, required=True, help="Output path for regression_guard.json")
     rg.add_argument("--max-red-increase", type=int, default=0, help="Maximum allowed increase in RED tier count (default 0)")
     rg.add_argument("--max-median-degradation-increase", type=float, default=0.0, help="Maximum allowed increase in median relative degradation (default 0.0)")
+    rg.add_argument("--max-physics-red-increase", type=int, default=0, help="Maximum allowed increase in PHYSICS-RED tier count (default 0)")
+    rg.add_argument("--max-physics-median-violation-increase", type=float, default=0.0, help="Maximum allowed increase in median physics max-violation (default 0.0)")
+    rg.add_argument("--max-mfe-red-increase", type=int, default=0, help="Maximum allowed increase in MFE-RED tier count (default 0)")
+    rg.add_argument("--max-mfe-median-worst-rel-deg-increase", type=float, default=0.0, help="Maximum allowed increase in median MFE worst-relative-degradation (default 0.0)")
 
     r = sub.add_parser("run", help="Run pipeline for a shot")
     r.add_argument("--shot", type=int, required=True)
@@ -135,8 +179,11 @@ def main(argv=None) -> int:
 
 
     args = ap.parse_args(argv)
-    cfg = AppConfig.load(Path(args.config))
+
+    cfg = None
     templates_dir = Path(__file__).resolve().parents[2] / "templates"
+    if hasattr(args, "config") and getattr(args, "config") is not None:
+        cfg = AppConfig.load(Path(args.config))
 
     if args.cmd == "doctor":
         ok = True
@@ -396,6 +443,67 @@ def main(argv=None) -> int:
         except Exception as e:
             print(f"[FAIL] consensus error: {e}")
             return 10
+
+
+    elif args.cmd == "physics-audit-run":
+        run_dir = Path(args.run).resolve()
+        cfg_pa = PhysicsAuditConfig(
+            physics_green=float(args.green),
+            physics_yellow=float(args.yellow),
+            primary_metric=str(args.primary_metric),
+            zero_timestamp_mode=True,
+        )
+        sc = run_physics_audit(run_dir, cfg_pa)
+        # optional plots
+        phys_dir = run_dir / "robustness_v4" / "physics_audit"
+        if args.plots:
+            make_physics_plots(phys_dir)
+        print(f"[OK] physics audit tier: {sc.tier}  max_violation={sc.max_violation}")
+        return 0
+
+    elif args.cmd == "physics-audit-pack":
+        run_dir = Path(args.run).resolve()
+        pack_dir = build_physics_audit_pack(run_dir)
+        print(f"[OK] physics audit pack: {pack_dir}")
+        return 0
+
+    elif args.cmd == "closure-atlas-build":
+        corpus_dir = Path(args.corpus).resolve()
+        out_dir = Path(args.out).resolve() if args.out is not None else None
+        out = build_closure_atlas(corpus_dir, out=out_dir)
+        print(f"[OK] closure atlas: {out}")
+        return 0
+
+
+    elif args.cmd == "forward-check-run":
+        run_dir = Path(args.run).resolve()
+        splits = generate_cv_splits(run_dir, max_splits=64)
+        df = run_forward_checks(run_dir, splits, primary_metric=str(args.primary_metric))
+        out_dir = run_dir / "robustness_v4" / "model_form"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out_dir / "forward_checks.csv", index=False)
+        (out_dir / "cv_splits.json").write_text(json.dumps({"schema_version":"v7.0.0","splits":[s.to_dict() for s in splits]}, indent=2, sort_keys=True))
+        print(f"[OK] forward checks written: {out_dir}")
+        return 0
+
+    elif args.cmd == "model-form-run":
+        run_dir = Path(args.run).resolve()
+        cfg_mf = ModelFormConfig(
+            mfe_green=float(args.green),
+            mfe_yellow=float(args.yellow),
+            primary_metric=str(args.primary_metric),
+            max_splits=int(args.max_splits),
+            zero_timestamp_mode=True,
+        )
+        sc = run_model_form_audit(run_dir, cfg_mf)
+        print(f"[OK] model-form tier: {sc.tier}  worst_relative_degradation={sc.worst_relative_degradation}")
+        return 0
+
+    elif args.cmd == "consistency-pack":
+        run_dir = Path(args.run).resolve()
+        pack = build_consistency_triangle_pack(run_dir)
+        print(f"[OK] consistency triangle pack: {pack}")
+        return 0
 
     if args.cmd == "run":
         # CLI overrides (kept deterministic and explicit): these override config for this invocation only.

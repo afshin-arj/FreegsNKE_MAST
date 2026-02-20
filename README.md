@@ -347,3 +347,17 @@ New CLI commands:
 - `mast-freegsnke regression-guard --delta <compare_dir>/delta_scorecards.json --out <path>`
 
 These commands provide deterministic cross-shot aggregation and A/B certified deltas without hidden optimization.
+
+
+## v6.0.0 — Certified Physics-Consistency Authority
+- Physics audit runner (closure tests + residual budget ledger)
+- Physics-consistency tiering (PHYSICS-GREEN/YELLOW/RED)
+- Physics audit reviewer pack + deterministic plots (hashed)
+- Corpus closure atlas + comparator/regression-guard extensions
+
+
+## v7.0.0 — Traceable Model-Form Error Authority
+- Deterministic CV splits + forward checks from scenario outputs
+- Model-form tiering (MFE-GREEN/YELLOW/RED)
+- Consistency Triangle reviewer pack (robustness + physics + model-form)
+- Atlas/comparator/regression-guard extensions for MFE
